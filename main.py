@@ -1,6 +1,8 @@
 from loader import *
 from state import *
 from exceptions import *
+import colorama
+from colorama import Fore, Back, Style
 
 valid = {'Yes': True, 'yes': True, 'Y': True, 'y': True, 'No': False, 'no': False, 'N': False, 'n': False}
 nth = {0: '', 1: 'first ', 2: 'second ', 3: 'third '}

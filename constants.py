@@ -1,0 +1,14 @@
+LIMIT = 16
+HEIGHT = 12
+EMPTY_LINE = ' ' * LIMIT
+MARGIN = ' ' * 2
+CARD_GAP = ' ' * 2
+
+BOTTOM_SHADOW = '╚═══════════════════╝'
+SIDE_SHADOW = '║'
+TOP_CORNER_SHADOW = '╗'
+
+WHITE_FG = '\033[37m'
+WHITE_BG = '\033[47m'
+BLACK_FG = '\033[30m'
+BLACK_BG = '\033[40m'
