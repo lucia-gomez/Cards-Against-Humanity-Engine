@@ -4,7 +4,7 @@ import colorama
 import shutil
 
 
-def formatCard(text):
+def _formatCard(text):
     lines = getCardLines(text)
     pad = lambda line: MARGIN + line + MARGIN
     paddedLines = [pad(EMPTY_LINE)]
@@ -20,45 +20,55 @@ def formatCard(text):
     return paddedLines
 
 
-def printCard(text, fg, bg):
-    cardLines = formatCard(text)
-
-    colorama.init(autoreset=True)
-    for i, line in enumerate(cardLines):
-        print(bg + fg + line, end='')
-        if i == 0:
-            print(TOP_CORNER_SHADOW)
-        else: print(SIDE_SHADOW)
-    print(BOTTOM_SHADOW)
-
-
-def printCardRow(cards):
+def _printCardRow(cards, bg, fg, labels=None):
     rows = [[] for _ in range(len(cards[0]))]
     [rows[j].append(line) for card in cards for j, line in enumerate(card)]
 
     colorama.init(autoreset=True)
     for i, row in enumerate(rows):
         for line in row:
-            print(WHITE_BG + BLACK_FG + line, end='')
+            print(bg + fg + line, end='')
             if i == 0:
                 print(TOP_CORNER_SHADOW, end=CARD_GAP)
             else:
                 print(SIDE_SHADOW, end=CARD_GAP)
         print()
     print(len(cards)*(BOTTOM_SHADOW+CARD_GAP))
-    print()
+
+    print(' ' * int((CARD_WIDTH - len(CARD_GAP) - 2) / 2), end='')
+    if labels is not None:
+        if labels[0] + 1 < 10:
+            print(end=' ')
+        for i in range(len(cards)):
+            print(labels[i] + 1, end=' ' * (CARD_WIDTH - 2))
+            if labels[i] + 1 < 10:
+                print(end=' ')
+    print('\n')
 
 
-def printHand(texts, isWhite):
-    cards = [formatCard(text) for text in texts]
+def _printHand(texts, isWhite):
+    cards = [_formatCard(text) for text in texts]
     # ensure all cards have the same dimensions
-    cardHeight = len(cards[0])
-    cardWidth = len(cards[0][0])
-    assert (all([len(card) == cardHeight and len(card[0]) == cardWidth for card in cards]))
+    height = len(cards[0])
+    width = len(cards[0][0])
+    assert (all([len(card) == height and len(card[0]) == width for card in cards]))
+
+    fg = BLACK_FG if isWhite else WHITE_FG
+    bg = WHITE_BG if isWhite else BLACK_BG
 
     columns, lines = shutil.get_terminal_size()
-    cardWidth = 2*len(MARGIN) + LIMIT + len(CARD_GAP)
-    cardsPerLine = int(columns / cardWidth)
-
+    cardsPerLine = int(columns / CARD_WIDTH)
     for i in range(0, len(cards), cardsPerLine):
-        printCardRow(cards[i:i+cardsPerLine])
+        _printCardRow(cards[i:i+cardsPerLine], bg, fg, range(i, i+cardsPerLine) if isWhite else None)
+
+
+def printWhiteHand(cards):
+    _printHand(cards, True)
+
+def printBlackCard(card):
+    _printHand([card], False)
+
+
+if __name__ == '__main__':
+    # printWhiteHand(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'])
+    printWhiteHand([['A', 'B'], ['C', 'D'], ['E', 'F'], ['G', 'H'], ['I', 'J'], ['K', 'L']])

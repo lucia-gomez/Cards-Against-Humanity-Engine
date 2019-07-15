@@ -1,13 +1,13 @@
 from constants import LIMIT
 
 
-def pad(s):
+def _pad(s):
     if len(s) < LIMIT:
         return s+(' ' * (LIMIT - len(s)))
     else: return s
 
 
-def chunk(s):
+def _chunk(s):
     i = LIMIT
     while i > 0 and s[i] != ' ':
         i -= 1
@@ -16,15 +16,15 @@ def chunk(s):
     return s[:i], s[i+1:]
 
 
-def getCardLinesHelper(s, lines):
+def _getCardLinesHelper(s, lines):
     if len(s) <= LIMIT:
-        lines.append(pad(s))
+        lines.append(_pad(s))
         return lines
     else:
-        good, rest = chunk(s)
-        lines.append(pad(good))
-        return getCardLinesHelper(rest, lines)
+        good, rest = _chunk(s)
+        lines.append(_pad(good))
+        return _getCardLinesHelper(rest, lines)
 
 
 def getCardLines(s):
-    return getCardLinesHelper(s, [])
+    return _getCardLinesHelper(s, [])

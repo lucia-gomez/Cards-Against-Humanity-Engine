@@ -3,8 +3,9 @@ HEIGHT = 12
 EMPTY_LINE = ' ' * LIMIT
 MARGIN = ' ' * 2
 CARD_GAP = ' ' * 2
+CARD_WIDTH = (2 * len(MARGIN)) + LIMIT + 1 + len(CARD_GAP)
 
-BOTTOM_SHADOW = '╚═══════════════════╝'
+BOTTOM_SHADOW = '╚' + '═' * (LIMIT + 2 * len(MARGIN) - 1) + '╝'
 SIDE_SHADOW = '║'
 TOP_CORNER_SHADOW = '╗'
 
