@@ -77,7 +77,7 @@ class State:
         self.round = 0
         self.pointsToWin = 1
         self.cardsPerHand = 7
-        self.numWildcards = 200
+        self.numWildcards = 20
 
         self._addWildcards()
         shuffle(self.whiteCards)

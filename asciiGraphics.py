@@ -1,5 +1,7 @@
 from parser import getCardLines
 from constants import *
+from state import Card, WhiteCard, BlackCard
+from typing import List
 import colorama
 import shutil
 
@@ -46,29 +48,34 @@ def _printCardRow(cards, bg, fg, labels=None):
     print('\n')
 
 
-def _printHand(texts, isWhite):
-    cards = [_formatCard(text) for text in texts]
+def _printHand(cards: List[Card], isWhite):
+    cardLines = [_formatCard(card) for card in cards]
     # ensure all cards have the same dimensions
-    height = len(cards[0])
-    width = len(cards[0][0])
-    assert (all([len(card) == height and len(card[0]) == width for card in cards]))
+    height = len(cardLines[0])
+    width = len(cardLines[0][0])
+    assert (all([len(card) == height and len(card[0]) == width for card in cardLines]))
 
     fg = BLACK_FG if isWhite else WHITE_FG
     bg = WHITE_BG if isWhite else BLACK_BG
 
     columns, lines = shutil.get_terminal_size()
     cardsPerLine = int(columns / CARD_WIDTH)
-    for i in range(0, len(cards), cardsPerLine):
-        _printCardRow(cards[i:i+cardsPerLine], bg, fg, range(i, i+cardsPerLine) if isWhite else None)
+    for i in range(0, len(cardLines), cardsPerLine):
+        _printCardRow(cardLines[i:i+cardsPerLine], bg, fg, range(i, i+cardsPerLine) if isWhite else None)
 
 
-def printWhiteHand(cards):
+def printWhiteHandMulti(cards: List[WhiteCard]):
+    pass
+
+
+def printWhiteHand(cards: List[WhiteCard]):
     _printHand(cards, True)
 
-def printBlackCard(card):
+
+def printBlackCard(card: BlackCard):
     _printHand([card], False)
 
 
 if __name__ == '__main__':
-    # printWhiteHand(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'])
-    printWhiteHand([['A', 'B'], ['C', 'D'], ['E', 'F'], ['G', 'H'], ['I', 'J'], ['K', 'L']])
+    printWhiteHand(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'])
+    # printWhiteHand([['A', 'B'], ['C', 'D'], ['E', 'F'], ['G', 'H'], ['I', 'J'], ['K', 'L']])

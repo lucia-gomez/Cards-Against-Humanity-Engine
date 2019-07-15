@@ -1,12 +1,9 @@
 from loader import *
 from state import *
 from exceptions import *
+from constants import COVER_ART, DIVIDER, NTH, RAINBOW, VALID
 import colorama
 from colorama import Fore, Back, Style
-
-valid = {'Yes': True, 'yes': True, 'Y': True, 'y': True, 'No': False, 'no': False, 'N': False, 'n': False}
-nth = {0: '', 1: 'first ', 2: 'second ', 3: 'third '}
-divider = '======================================'
 
 
 def validateInt(prompt: str, cond, errorMsg: str):
@@ -50,11 +47,11 @@ def playerTurn(blanks: int, player: Player, state: State):
     offset = 1 if blanks > 1 else 0
     selections = []
     for i in range(blanks):
-        x = validateInt('Select your ' + nth[i + offset] + 'card: ', (lambda x: 1<=x<=max),
+        x = validateInt('Select your ' + NTH[i + offset] + 'card: ', (lambda x: 1<=x<=max),
                     'You must enter a number between 1 and ' + str(max) + '.')
         while x in selections:
             print('You already played this card! Choose another one to play.')
-            x = validateInt('Select your ' + nth[i + offset] + 'card: ', (lambda x: 1 <= x <= max),
+            x = validateInt('Select your ' + NTH[i + offset] + 'card: ', (lambda x: 1 <= x <= max),
                             'You must enter a number between 1 and ' + str(max) + '.')
         selections.append(x)
         try:
@@ -74,13 +71,13 @@ def judgeTurn(player: Player, state: State):
 def playRound(state: State):
     (judge, players), blackCard = state.newRound()
     for player in players:
-        print(divider + '\n')
+        print(DIVIDER + '\n')
         print(judge.name + ' is judging: ')
         print(blackCard + '\n')
         print(player.name + '\'s hand:\n')
         playerTurn(blackCard.numBlanks, player, state)
         print()
-    print(divider + '\n')
+    print(DIVIDER + '\n')
     print(str(blackCard) + '\n')
     print(state.getSubmissions())
     winner, winningCards = judgeTurn(judge, state)
@@ -94,10 +91,10 @@ def playRound(state: State):
 def playAgain(state: State):
     x = input('Do you want to play again? [Y/n]: ').strip()
     try:
-        if x == '' or valid[x]:
+        if x == '' or VALID[x]:
             reuse = input('Do you want to reuse the current game setup and players? [Y/n]: ').strip()
             print()
-            return (state if reuse == '' or valid[reuse] else None)
+            return (state if reuse == '' or VALID[reuse] else None)
         exit(0)
     except:
         exit(0)
@@ -117,5 +114,17 @@ def init(state=None):
     init(playAgain(state))
 
 
+def printCoverArt(rainbow=False):
+    artLines = loadArt('coverArt.txt')
+    print('Welcome to...')
+    for i, line in enumerate(artLines):
+        color = RAINBOW[i%len(RAINBOW)] if rainbow else COVER_ART
+        print(color + line, end='')
+    print()
+    print(DIVIDER)
+
+
 if __name__ == '__main__':
+    colorama.init(autoreset=True)
+    printCoverArt()
     init()
