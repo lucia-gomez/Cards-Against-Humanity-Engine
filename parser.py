@@ -16,15 +16,15 @@ def _chunk(s):
     return s[:i], s[i+1:]
 
 
-def _getCardLinesHelper(s, lines):
+def _get_card_lines_helper(s, lines):
     if len(s) <= LIMIT:
         lines.append(_pad(s))
         return lines
     else:
         good, rest = _chunk(s)
         lines.append(_pad(good))
-        return _getCardLinesHelper(rest, lines)
+        return _get_card_lines_helper(rest, lines)
 
 
-def getCardLines(s):
-    return _getCardLinesHelper(s, [])
+def get_card_lLines(s):
+    return _get_card_lines_helper(s, [])
