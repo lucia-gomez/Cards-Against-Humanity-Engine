@@ -1,21 +1,20 @@
-import loader
 import colorama
-from state import Player, WhiteCard
-from constants import COLORS, DIVIDER, RAINBOW
+from constants import COLORS, DIVIDER, RAINBOW, VALID
 
 colorama.init(autoreset=True)
 
 
 def printCoverArt(rainbow=False):
-    artLines = loader.loadArt('coverArt.txt')
+    # artLines = loadArt('art/coverArt.txt')
+    with open('art/coverArt.txt', 'r') as file:
+        lines = file.readlines()
+    file.close()
     print()
     print(COLORS['COVER_ART'] + 'Welcome to...')
-    for i, line in enumerate(artLines):
+    for i, line in enumerate(lines):
         color = RAINBOW[i%len(RAINBOW)] if rainbow else COLORS['COVER_ART']
         print(color + line, end='')
-    print('\n')
-    print(DIVIDER)
-    print()
+    print('\n' + DIVIDER + '\n')
 
 
 def print_username(name):
@@ -46,17 +45,32 @@ def judge_pick(max_val: int, player_name: str):
                                       str(max_val) + '.')
 
 
+def play_again(state):
+    x = input('Do you want to play again? [Y/n]: ').strip()
+    try:
+        if x == '' or VALID[x]:
+            reuse = input('Do you want to reuse the current game setup and players? [Y/n]: ').strip()
+            print()
+            return state if reuse == '' or VALID[reuse] else None
+        exit(0)
+    except:
+        exit(0)
+
+
 def validateInt(prompt: str, cond, errorMsg: str):
     while True:
         try:
             print(COLORS['PROMPT'] + prompt, end='')
-            x = int(input())
-            if x == '^C':
-                exit(0)
-            if cond(x): return x
+            x = input()
+            x = int(x)
+            if cond(x):
+                return x
             print(COLORS['ERROR'] + errorMsg)
             pass
-        except: print(COLORS['ERROR'] + 'Please enter a whole number.')
+        except KeyboardInterrupt:
+            exit(0)
+        except ValueError:
+            print(COLORS['ERROR'] + 'Please enter a whole number.')
 
 
 def validateString(prompt, maxLength):

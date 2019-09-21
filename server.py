@@ -3,15 +3,13 @@ import signal
 import pickle
 import loader
 import interface
-from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING
+from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING, DIVIDER, VALID, COLORS
 from state import State, BlackCard, Player
 from exceptions import *
 from threading import Thread, Barrier
 
 MAX_PLAYERS = 3
 global server, clients
-game = State(loader.loadWhiteCards('white_cards.csv'),
-             loader.loadBlackCards('black_cards.csv'))
 
 
 def send_msg(cmd: int, conn=None, data=None, except_id=None):
@@ -19,8 +17,11 @@ def send_msg(cmd: int, conn=None, data=None, except_id=None):
     if data is not None:
         msg += data
     if conn is not None:
-        conn.sendall(msg.encode(ENCODING))
-        conn.sendall((' '*BUFF_SIZE).encode(ENCODING))
+        try:
+            conn.sendall(msg.encode(ENCODING))
+            conn.sendall((' '*BUFF_SIZE).encode(ENCODING))
+        except BrokenPipeError:
+            pass
     else:
         for id in clients.keys():
             if id != except_id:
@@ -31,8 +32,33 @@ def send_msg(cmd: int, conn=None, data=None, except_id=None):
                     pass
 
 
-def send_obj(conn, data):
-    conn.sendall(pickle.dumps(data))
+def send_obj(data, conn=None, except_id=None):
+    obj = pickle.dumps(data)
+    if conn is None:
+        for id in clients.keys():
+            if id != except_id:
+                try:
+                    clients[id].sendall(obj)
+                except BrokenPipeError:
+                    pass
+        pass
+    else:
+        try:
+            conn.sendall(obj)
+        except BrokenPipeError:
+            pass
+
+
+# def send_art_line(data: str, conn=None, except_id=None):
+#     if conn is None:
+#         for id in clients.keys():
+#             if id != except_id:
+#                 clients[id].sendall(data.encode(ENCODING))
+#                 clients[id].sendall((' ' * BUFF_SIZE).encode(ENCODING))
+#         pass
+#     else:
+#         conn.sendall(data.encode(ENCODING))
+#         conn.sendall((' ' * BUFF_SIZE).encode(ENCODING))
 
 
 def split_msg_data(data):
@@ -46,27 +72,38 @@ def split_msg_data(data):
 
 
 def recv_msg(conn):
-    return conn.recv(BUFF_SIZE).decode(ENCODING)
+    try:
+        msg = conn.recv(BUFF_SIZE).decode(ENCODING)
+        if msg == str(COMMANDS['KILL']):
+            raise ConnectionResetError
+        return msg
+    except ConnectionResetError:
+        player = None
+        for p in game.players:
+            if clients[p.id] == conn:
+                player = p
+        raise PlayerDisconnected(player)
 
 
-def connect_client(sock: socket, addr: str, barrier: Barrier):
-    global clients
+def connect_client(sock: socket, barrier: Barrier):
+    global clients, num_connections
     send_msg(COMMANDS['NAME'], sock)
-    name = recv_msg(sock)
-    send_msg(COMMANDS['PLAYER_JOINED'], data=split_msg_data([0, name]))
-    send_msg(COMMANDS['PLAYER_JOINED'], sock,
-             split_msg_data([1, game.pretty_player_names()]))
-    player_id = len(clients)
-    clients[player_id] = sock
-    game.add_player(name, player_id)
-    interface.player_joined(name)
+    try:
+        name = recv_msg(sock)
+        num_connections += 1
+        send_msg(COMMANDS['PLAYER_JOINED'], data=split_msg_data([0, name]))
+        send_msg(COMMANDS['PLAYER_JOINED'], sock,
+                 split_msg_data([1, game.pretty_player_names()]))
+        player_id = len(clients)
+        clients[player_id] = sock
+        game.add_player(name, player_id)
+        interface.player_joined(name)
+        barrier.wait()
+    except PlayerDisconnected as e:
+        pass
 
-    barrier.wait()
-    send_msg(COMMANDS['WELCOME'], sock)
 
-
-def receive_submission(sock, player: Player, black_card, judge: Player,
-                       offset: int):
+def receive_submission(sock, player: Player, offset: int):
     try:
         while True:
             card_num = int(recv_msg(sock))
@@ -75,6 +112,8 @@ def receive_submission(sock, player: Player, black_card, judge: Player,
             send_msg(COMMANDS['PLAY_CARD_AGAIN'], sock)
             send_msg(COMMANDS['PLAY_CARD'], sock,
                      split_msg_data([len(player.hand), offset]))
+    except PlayerDisconnected as e:
+        player_disconnected(e)
     except Wildcard as e:
         send_msg(COMMANDS['WILDCARD'], sock)
         text = recv_msg(sock)
@@ -91,22 +130,26 @@ def player_turn(sock, barrier, player, black_card: BlackCard, judge):
     for i in range(black_card.numBlanks):
         send_msg(COMMANDS['PLAY_CARD'], sock,
                  split_msg_data([len(player.hand), i + offset]))
-        receive_submission(sock, player, black_card, judge, i + offset)
+        receive_submission(sock, player, i + offset)
 
     send_msg(COMMANDS['PLAINTEXT'], sock,
-             'You played ' + str(game.submissions[player]))
+             'You played ' + str(game.submissions[player]) + '\n\n' +
+             DIVIDER + '\n\nWaiting for other players...')
     game.draw_cards(player)
     send_msg(COMMANDS['PLAYED'], clients[judge.id], player.name)
     barrier.wait()
 
 
 def judge_turn(sock, judge):
-    send_msg(COMMANDS['JUDGE'], sock)
-    subs = game.get_submissions()
-    y = [[str(card) for card in x]for x in subs]
-    send_obj(sock, y)
-    selection = int(recv_msg(sock))
-    return game.select_winner(selection)
+    send_msg(COMMANDS['JUDGE'], data=split_msg_data([judge.name, 0]),
+             except_id=judge.id)
+    send_msg(COMMANDS['JUDGE'], sock, data=split_msg_data([judge.name, 1]))
+    send_obj([[str(card) for card in x]for x in game.get_submissions()])
+    try:
+        selection = int(recv_msg(sock))
+        return game.select_winner(selection)
+    except PlayerDisconnected as e:
+        player_disconnected(e)
 
 
 def play_round():
@@ -115,7 +158,7 @@ def play_round():
     player_threads = []
     send_msg(COMMANDS['BLACK_CARD'], clients[judge.id], str(black_card))
     send_msg(COMMANDS['PLAINTEXT'], clients[judge.id],
-             'You\'re judging- wait for everyone to play')
+             'You are the judge- waiting for everyone to play...')
     for player in players:
         thread = Thread(target=player_turn,
                         args=(clients[player.id], barrier, player,
@@ -127,42 +170,96 @@ def play_round():
     for thread in player_threads:
         thread.join()
     winner, winning_cards = judge_turn(clients[judge.id], judge)
-    print(winner, winning_cards)
-    send_msg(COMMANDS['WINNER'], data=split_msg_data([winner.name, winning_cards, 0]), except_id=winner.id)
-    send_msg(COMMANDS['WINNER'], conn=clients[winner.id], data=split_msg_data(['', winning_cards, 1]))
+    send_msg(COMMANDS['WINNER'],
+             data=split_msg_data([winner.name, winning_cards, 0]),
+             except_id=winner.id)
+    send_msg(COMMANDS['WINNER'], conn=clients[winner.id],
+             data=split_msg_data(['', winning_cards, 1]))
+    send_msg(COMMANDS['PLAINTEXT'], data='SCOREBOARD\n'+game.get_scores()+'\n'+DIVIDER+'\n')
+    if game.is_game_over():
+        raise GameOver(winner)
 
 
-def start():
-    global server, clients
+def start_game():
+    pass
+
+
+def init(game_state=None):
+    global server, clients, game, num_connections
+
     host = socket.gethostname()
     ip = socket.gethostbyname(host)
     port = 8080
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    clients = {}
-    threads = []
-    barrier = Barrier(MAX_PLAYERS)
-
     print('Connected to ' + ip + ':' + str(port))
-    server.bind((ip, port))
-    server.listen(MAX_PLAYERS)
-    for i in range(MAX_PLAYERS):
-        conn, addr = server.accept()
-        client_thread = Thread(target=connect_client,
-                               args=(conn, addr, barrier,))
-        client_thread.setDaemon(True)
-        threads.append(client_thread)
-        client_thread.start()
 
-    for thread in threads:
-        thread.join()
+    if game_state is None:
+        game = State(loader.loadWhiteCards('white_cards.csv'),
+                     loader.loadBlackCards('black_cards.csv'))
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind((ip, port))
+        clients = {}
+        threads = []
+        barrier = Barrier(MAX_PLAYERS)
 
-    play_round()
-    kill_clients()
-    server.close()
+        server.listen(MAX_PLAYERS)
+        num_connections = 0
+        for i in range(MAX_PLAYERS):
+            try:
+                conn, addr = server.accept()
+                client_thread = Thread(target=connect_client,
+                                       args=(conn, barrier,))
+                client_thread.setDaemon(True)
+                threads.append(client_thread)
+                client_thread.start()
+            except ConnectionAbortedError:
+                pass
+
+        for thread in threads:
+            thread.join()
+
+    send_msg(COMMANDS['ART'])
+
+    # send_msg(COMMANDS['ART'], data='COVER_ART')
+    # cover_art_lines = loader.loadArt('art/coverArt.txt')
+    # for line in cover_art_lines:
+    #     print(line)
+    #     send_art_line(CMD_SPLIT + line + CMD_SPLIT)
+    # send_art_line(CMD_END)
+
+    while True:
+        try:
+            play_round()
+        except GameOver as e:
+            send_msg(COMMANDS['WON_GAME'], data=split_msg_data([e.player.name, 0]),
+                     except_id=e.player.id)
+            send_msg(COMMANDS['WON_GAME'], conn=clients[e.player.id],
+                     data=split_msg_data(['', 1]))
+            break
+    game.reset()
+
+    x = input('Do you want to play again? [Y/n]: ').strip()
+    try:
+        if x == '' or VALID[x]:
+            init(game)
+        kill_clients()
+        server.close()
+    except:
+        kill_clients()
+        server.close()
 
 
 def kill_clients():
     send_msg(COMMANDS['KILL'])
+
+
+def player_disconnected(ex):
+    if ex.player is None:
+        print(COLORS['ERROR'] + 'Player disconnected')
+        server.close()
+    else:
+        print(COLORS['USERNAME'] + ex.player.name, end='')
+        print(COLORS['ERROR'] + ' disconnected')
+        server.close()
 
 
 def force_exit(signum, frame):
@@ -175,4 +272,4 @@ def force_exit(signum, frame):
 if __name__ == '__main__':
     original_sigint = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, force_exit)
-    start()
+    init()

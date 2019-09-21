@@ -4,7 +4,7 @@ import interface
 import asciiGraphics
 import colorama
 import signal
-from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING, COLORS, NTH
+from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING, COLORS, NTH, DIVIDER
 from typing import List
 
 
@@ -17,6 +17,18 @@ def recv_msg():
     return msg.strip()
 
 
+# def recv_art():
+#     art = ''
+#     while True:
+#         raw_line: str = sock.recv(BUFF_SIZE).decode(ENCODING, errors='ignore')
+#         line = raw_line.split(CMD_SPLIT)
+#         if len(line) > 2:
+#             data = line[1]
+#             if CMD_END in data:
+#                 return art + data.strip(CMD_END)
+#             art += data
+
+
 def recv_obj():
     while True:
         raw_data = sock.recv(BUFF_SIZE)
@@ -25,11 +37,12 @@ def recv_obj():
             return pickle.loads(data)
 
 
-def welcome():
+def print_art(color: str):
     interface.printCoverArt()
 
 
 def kill():
+    print()
     print(COLORS['ERROR'] + 'The server has been shutdown')
     sock.close()
     exit(0)
@@ -76,19 +89,35 @@ def print_black_card(text):
     asciiGraphics.print_black_card(text)
 
 
-def judge(hand: List[List[str]]):
-    print()
+def judge(hand: List[List[str]], judge_name: str, is_me: int):
+    print('\nEveryone has played!\n')
     asciiGraphics.print_submissions(hand)
-    selection = interface.judge_pick(len(hand), 'NAME')
-    send_msg(selection)
+    if is_me:
+        selection = interface.judge_pick(len(hand), judge_name)
+        send_msg(selection)
+    else:
+        print('Judge ', end='')
+        interface.print_username(judge_name)
+        print(' is choosing the winner...')
 
 
-def winner(winner_name: str, winning_cards: str, is_me: bool):
+def winner(winner_name: str, winning_cards: str, is_me: int):
     if is_me:
         print(COLORS['WIN'] + 'You won with ' + winning_cards)
     else:
         interface.print_username(winner_name)
         print(' won with ' + winning_cards)
+    print()
+
+
+def won_game(winner_name: str, is_me: int):
+    print()
+    if is_me:
+        print(COLORS['WIN'] + 'YOU WON THE GAME!')
+    else:
+        interface.print_username(winner_name)
+        print(' won the game!')
+    print('\n' + DIVIDER + '\n')
 
 
 def parse_command(msg: str):
@@ -96,8 +125,8 @@ def parse_command(msg: str):
     cmd = int(data[0])
     args = data[1:]
 
-    if cmd == COMMANDS['WELCOME']:
-        welcome()
+    if cmd == COMMANDS['ART']:
+        print_art(args[0])
     elif cmd == COMMANDS['PLAINTEXT']:
         print(args[0])
     elif cmd == COMMANDS['NAME']:
@@ -105,7 +134,6 @@ def parse_command(msg: str):
     elif cmd == COMMANDS['PLAYER_JOINED']:
         interface.player_joined(args[1], int(args[0]))
     elif cmd == COMMANDS['START_PLAYER_TURN']:
-        # order: judge_name, black_card_text, hand
         start_player_turn(args[0], args[1], args[2:])
     elif cmd == COMMANDS['PLAY_CARD']:
         play_card(args[0], args[1])
@@ -116,9 +144,11 @@ def parse_command(msg: str):
     elif cmd == COMMANDS['PLAY_CARD_AGAIN']:
         play_again()
     elif cmd == COMMANDS['JUDGE']:
-        judge(recv_obj())
+        judge(recv_obj(), args[0], int(args[1]))
     elif cmd == COMMANDS['WINNER']:
-        winner(args[0], args[1], bool(args[2]))
+        winner(args[0], args[1], int(args[2]))
+    elif cmd == COMMANDS['WON_GAME']:
+        won_game(args[0], int(args[1]))
     elif cmd == COMMANDS['BLACK_CARD']:
         print_black_card(args[0])
     elif cmd == COMMANDS['KILL']:
@@ -132,7 +162,11 @@ def start():
     host = socket.gethostname()
     port = 8080
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
+    try:
+        sock.connect((host, port))
+    except ConnectionRefusedError:
+        print(COLORS['ERROR'] + 'The server is offline')
+        exit(0)
     while True:
         data = recv_msg()
         if len(data) > 0:
@@ -141,6 +175,7 @@ def start():
 
 def force_exit(signum, frame):
     signal.signal(signal.SIGINT, original_sigint)
+    send_msg(COMMANDS['KILL'])
     sock.close()
     exit(1)
 

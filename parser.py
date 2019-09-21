@@ -26,5 +26,5 @@ def _get_card_lines_helper(s, lines):
         return _get_card_lines_helper(rest, lines)
 
 
-def get_card_lLines(s):
+def get_card_lines(s):
     return _get_card_lines_helper(s, [])

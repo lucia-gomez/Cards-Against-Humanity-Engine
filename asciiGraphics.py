@@ -1,13 +1,12 @@
 import parser
-import colorama
+from termcolor import colored
 import shutil
 from constants import *
 from typing import List
-from state import WhiteCard
 
 
 def _format_card(text):
-    lines = parser.get_card_lLines(text)
+    lines = parser.get_card_lines(text)
     pad = lambda line: MARGIN + line + MARGIN
     padded_lines = [pad(EMPTY_LINE)]
 
@@ -21,39 +20,38 @@ def _format_card(text):
     assert(len(padded_lines) == HEIGHT)
     return padded_lines
 
-
 def _print_card_row(cards, n: int, bg, fg, labels=None):
     rows = [[] for _ in range(len(cards[0]))]
     [rows[j].append(line) for card in cards for j, line in enumerate(card)]
-
-    colorama.init(autoreset=True)
+    s = ''
     for i, row in enumerate(rows):
         for j, line in enumerate(row):
-            print(bg + fg + line, end='')
+            s += colored(bg + fg + line)
             if i == 0:
-                print(TOP_CORNER_SHADOW, end=CARD_GAP)
+                s += TOP_CORNER_SHADOW + CARD_GAP
             else:
-                print(SIDE_SHADOW, end=CARD_GAP)
+                s += SIDE_SHADOW + CARD_GAP
             if j % n == (n - 1):
-                print(end=SET_GAP(n))
-        print()
+                s += SET_GAP(n)
+        s += '\n'
     for i in range(len(cards)):
         if i % n == (n - 1):
-            print(BOTTOM_SHADOW + CARD_GAP + SET_GAP(n), end='')
+            s += BOTTOM_SHADOW + CARD_GAP + SET_GAP(n)
         else:
-            print(BOTTOM_SHADOW + CARD_GAP, end='')
-    print()
+            s += BOTTOM_SHADOW + CARD_GAP
+    s += '\n'
 
-    print(' ' * int((SET_WIDTH(n) - len(SET_GAP(n)) - 2 * len(CARD_GAP)) / 2), end='')
+    s += (' ' * int((SET_WIDTH(n) - len(SET_GAP(n)) - 2 * len(CARD_GAP)) / 2))
 
     if labels is not None:
         if labels[0] + 1 < 10:
-            print(end=' ')
+            s += ' '
         for i in labels:
-            print(i + 1, end=(' ' * (int(SET_WIDTH(n)) - len(CARD_GAP))))
+            s += str(i + 1) + (' ' * (SET_WIDTH(n) - len(CARD_GAP)))
             if i + 1 < 10:
-                print(end=' ')
-    print('\n')
+                s += ' '
+    s += '\n'
+    print(s)
 
 
 def _print_hand(cards: List[List[str]], is_white: bool):
@@ -74,19 +72,19 @@ def _print_hand(cards: List[List[str]], is_white: bool):
                         range(i, min(len(card_lines), i + sets_per_line)) if is_white else None)
 
 
-def print_black_card(card: WhiteCard or str):
+def print_black_card(card):
     _print_hand([[str(card)]], False)
 
 
-def print_submissions(submissions: List[List[WhiteCard or str]]):
+def print_submissions(submissions):
     _print_hand(submissions, True)
 
 
-def print_player_hand(hand: List[WhiteCard or str]):
+def print_player_hand(hand):
     _print_hand([[str(card)] for card in hand], True)
 
 
 if __name__ == '__main__':
-    # print_hand(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'])
-    # print_hand([['A', 'B'], ['C', 'D'], ['E', 'F'], ['G', 'H'], ['I', 'J'], ['K', 'L']])
+    print_submissions(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'])
+    print_submissions([['A', 'B'], ['C', 'D'], ['E', 'F'], ['G', 'H'], ['I', 'J'], ['L', 'M']])
     print_submissions([['A', 'B', 'C'], ['D', 'E', 'F']])

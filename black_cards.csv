@@ -38,7 +38,7 @@ BLACK_CARDS, NUM_BLANKS
 "Cornell students are unlikely to find __ after graduation",1
 "I took 5-hour energy because of __",1
 "The prelim is in 2 hours and I don't know anything about __",1
-"I don't know what __ is/are and I'm too afraid to ask.",1
+"I don't know what __ is and I'm too afraid to ask.",1
 "I love __ at Cornell on Valentine's Day",1
 "Any person, any study, any __",1
 "Make Cornell __ Again",1
@@ -119,3 +119,5 @@ BLACK_CARDS, NUM_BLANKS
 "Cornell spent my tuition on __ when they should have spent it on __ ",2
 "Two of the greatest alumni are __ and __",2
 "The two most important things I learned at Cornell are __ and __",2
+"Only the bravest, most intrepid freshman attempt __",1
+"If they ever get rid of __, I'm dropping out",1

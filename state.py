@@ -58,8 +58,9 @@ class Player:
             raise Wildcard(index)
         return card
 
-    def inc_score(self):
+    def inc_score(self) -> int:
         self.score += 1
+        return self.score
 
     def __str__(self):
         return self.name + ': ' + str(self.score)
@@ -80,9 +81,9 @@ class State:
         self.blackDiscards = []
         self.submissions: Dict[Player, List[WhiteCard]] = {}
         self.round = 0
-        self.pointsToWin = 3
+        self.pointsToWin = 1
         self.cardsPerHand = 7
-        self.numWildcards = 30
+        self.numWildcards = 10
 
         self.lock = Lock()
 
@@ -187,7 +188,12 @@ class State:
         self.submissions = {}
         winner.inc_score()
         return winner, cards
-        # return winner, self._pretty_print_submission(cards)
+
+    def is_game_over(self) -> bool:
+        for player in self.players:
+            if player.score >= self.pointsToWin:
+                return True
+        return False
 
     def get_scores(self):
         s = ''
