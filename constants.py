@@ -3,18 +3,28 @@ NTH = {0: '', 1: 'first ', 2: 'second ', 3: 'third '}
 DIVIDER = '=================================================='
 
 ### ASCII CARD GRAPHICS ###
+# max number of characters per line on cards
 LIMIT = 18
+# height of a card, in number of lines
 HEIGHT = 14
+# an empty card line of text
 EMPTY_LINE = ' ' * LIMIT
+# horizontal padding between the edge of card and card text
 MARGIN = ' ' * 2
+# space between 2 cards in a hand
 CARD_GAP = ' ' * 2
-SET_GAP = lambda n: ' ' * 2 if n > 1 else ''
+# total width of one card
 CARD_WIDTH = (2 * len(MARGIN)) + LIMIT + 1 + len(CARD_GAP)
+# space between 2 cards in a set, i.e. for 2-blank rounds
+SET_GAP = lambda n: ' ' * 2 if n > 1 else ''
+# total width of a set of cards, i.e. for 2-blank rounds
 SET_WIDTH = lambda n: n * CARD_WIDTH + len(SET_GAP(n)) if n > 1 else CARD_WIDTH
 
-
+# shadow on the bottom edge of cards
 BOTTOM_SHADOW = '╚' + '═' * (LIMIT + 2 * len(MARGIN) - 1) + '╝'
+# shadow for one line of a card side
 SIDE_SHADOW = '║'
+# shadow for top right-hand corner of cards
 TOP_CORNER_SHADOW = '╗'
 
 ### ASCII COLORS ###
