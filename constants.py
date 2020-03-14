@@ -16,7 +16,7 @@ CARD_GAP = ' ' * 2
 # total width of one card
 CARD_WIDTH = (2 * len(MARGIN)) + LIMIT + 1 + len(CARD_GAP)
 # space between 2 cards in a set, i.e. for 2-blank rounds
-SET_GAP = lambda n: ' ' * 2 if n > 1 else ''
+SET_GAP = lambda n: ' ' * 3 if n > 1 else ''
 # total width of a set of cards, i.e. for 2-blank rounds
 SET_WIDTH = lambda n: n * CARD_WIDTH + len(SET_GAP(n)) if n > 1 else CARD_WIDTH
 
