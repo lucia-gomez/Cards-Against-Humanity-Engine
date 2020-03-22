@@ -1,6 +1,7 @@
 from state import *
 from exceptions import *
-from constants import DIVIDER, NTH, COLORS
+from constants import DIVIDER, NTH, COLORS, MAX_PLAYERS, \
+    DEFAULT_BLACK_CARDS, DEFAULT_WHITE_CARDS
 import asciiGraphics
 import colorama
 import interface
@@ -16,7 +17,7 @@ def load_players():
         at most 30 characters.
     """
     num_players = interface.validateInt('Enter number of players: ',
-                                        (lambda x: 2 < x <= 20),
+                                        (lambda x: 2 < x <= MAX_PLAYERS),
                                         'Number of players must be between 2 and 20.')
     for i in range(num_players):
         name = interface.validateString('Enter Player ' + str(i + 1) + '\'s name: ', 30).upper()
@@ -103,8 +104,8 @@ def init(state=None):
     """
     global game_state
     if state is None:
-        game_state = State(loader.loadWhiteCards('white_cards_roomies.csv'),
-                           loader.loadBlackCards('black_cards_roomies.csv'))
+        game_state = State(loader.loadWhiteCards(DEFAULT_WHITE_CARDS),
+                           loader.loadBlackCards(DEFAULT_BLACK_CARDS))
         load_players()
     while True:
         try:

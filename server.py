@@ -3,7 +3,8 @@ import signal
 import pickle
 import loader
 import interface
-from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING, DIVIDER, VALID, COLORS
+from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING, DIVIDER, \
+    VALID, COLORS, DEFAULT_BLACK_CARDS, DEFAULT_WHITE_CARDS, DEFAULT_PORT
 from state import State, BlackCard, Player
 from exceptions import *
 from threading import Thread, Barrier
@@ -85,24 +86,6 @@ def recv_msg(conn):
         raise PlayerDisconnected(player)
 
 
-def connect_client(sock: socket, barrier: Barrier):
-    global clients, num_connections
-    send_msg(COMMANDS['NAME'], sock)
-    try:
-        name = recv_msg(sock)
-        num_connections += 1
-        send_msg(COMMANDS['PLAYER_JOINED'], data=split_msg_data([0, name]))
-        send_msg(COMMANDS['PLAYER_JOINED'], sock,
-                 split_msg_data([1, game.pretty_player_names()]))
-        player_id = len(clients)
-        clients[player_id] = sock
-        game.add_player(name, player_id)
-        interface.player_joined(name)
-        barrier.wait()
-    except PlayerDisconnected as e:
-        pass
-
-
 def receive_submission(sock, player: Player, offset: int):
     try:
         while True:
@@ -180,42 +163,75 @@ def play_round():
         raise GameOver(winner)
 
 
-def start_game():
-    pass
+def connect_client(sock: socket, barrier: Barrier):
+    global clients
+    send_msg(COMMANDS['NAME'], sock)
+    try:
+        name = recv_msg(sock)
+        send_msg(COMMANDS['PLAYER_JOINED'], data=split_msg_data([0, name]))
+        send_msg(COMMANDS['PLAYER_JOINED'], sock,
+                 split_msg_data([1, game.pretty_player_names()]))
+        player_id = len(clients)
+        clients[player_id] = sock
+        game.add_player(name, player_id)
+        interface.player_joined(name)
+        barrier.wait()
+    except PlayerDisconnected as e:
+        pass
+
+
+def get_address():
+    """ The IP address and port to host the server on
+
+    :return: (ip address, port number)
+    """
+    host = socket.gethostname()
+    ip = socket.gethostbyname(host)
+    port = DEFAULT_PORT
+    return ip, port
+
+
+def setup_server(ip, port):
+    global clients, game, server
+
+    # initialize game state
+    game = State(loader.loadWhiteCards(DEFAULT_WHITE_CARDS),
+                 loader.loadBlackCards(DEFAULT_BLACK_CARDS))
+
+    # bind socket to address
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind((ip, port))
+
+    clients = {}
+    threads = []
+    barrier = Barrier(MAX_PLAYERS)
+
+    server.listen(MAX_PLAYERS)
+    for i in range(MAX_PLAYERS):
+        try:
+            conn, addr = server.accept()
+            client_thread = Thread(target=connect_client,
+                                   args=(conn, barrier,))
+            client_thread.setDaemon(True)
+            threads.append(client_thread)
+            client_thread.start()
+        except ConnectionAbortedError:
+            pass
+
+    for thread in threads:
+        thread.join()
 
 
 def init(game_state=None):
-    global server, clients, game, num_connections
+    global server, clients, game
+    ip, port = get_address()
+    print(COLORS['PROMPT'] + 'Connected to ' + ip + ':' + str(port))
 
-    host = socket.gethostname()
-    ip = socket.gethostbyname(host)
-    port = 8080
-    print('Connected to ' + ip + ':' + str(port))
-
+    # if a game isn't already setup, set up a game state and server
+    # otherwise, use existing state and server
     if game_state is None:
-        game = State(loader.loadWhiteCards('white_cards.csv'),
-                     loader.loadBlackCards('black_cards.csv'))
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind((ip, port))
-        clients = {}
-        threads = []
-        barrier = Barrier(MAX_PLAYERS)
-
-        server.listen(MAX_PLAYERS)
-        num_connections = 0
-        for i in range(MAX_PLAYERS):
-            try:
-                conn, addr = server.accept()
-                client_thread = Thread(target=connect_client,
-                                       args=(conn, barrier,))
-                client_thread.setDaemon(True)
-                threads.append(client_thread)
-                client_thread.start()
-            except ConnectionAbortedError:
-                pass
-
-        for thread in threads:
-            thread.join()
+        setup_server(ip, port)
 
     send_msg(COMMANDS['ART'])
 

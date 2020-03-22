@@ -2,6 +2,13 @@ VALID = {'Yes': True, 'yes': True, 'Y': True, 'y': True, 'No': False, 'no': Fals
 NTH = {0: '', 1: 'first ', 2: 'second ', 3: 'third '}
 DIVIDER = '=================================================='
 
+# max number of players allowed in a game
+MAX_PLAYERS = 20
+# default white card pack
+DEFAULT_WHITE_CARDS = 'white_cards.csv'
+# default black card pack
+DEFAULT_BLACK_CARDS = 'black_cards.csv'
+
 ### GAME RULES ###
 class GameRules:
     # number of cards each player should have in their hand at any given time
@@ -50,6 +57,7 @@ RAINBOW = ['\033[1;31m', '\033[1;33m', '\033[1;92m', '\033[36m',
            '\033[34m', '\033[1;35m', '\033[1;95m']
 
 ### NETWORK CONSTANTS ###
+DEFAULT_PORT = 8080
 BUFF_SIZE = 4096
 CMD_SPLIT = '%%'
 ENCODING = 'utf-8'

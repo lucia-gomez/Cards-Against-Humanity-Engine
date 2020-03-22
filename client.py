@@ -4,7 +4,8 @@ import interface
 import asciiGraphics
 import colorama
 import signal
-from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING, COLORS, NTH, DIVIDER
+from constants import BUFF_SIZE, COMMANDS, CMD_SPLIT, ENCODING, \
+    COLORS, NTH, DIVIDER, DEFAULT_PORT
 from typing import List
 
 
@@ -159,11 +160,11 @@ def parse_command(msg: str):
 
 def start():
     global sock
+    # TODO: prompt the user for address
     host = socket.gethostname()
-    port = 8080
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        sock.connect((host, port))
+        sock.connect((host, DEFAULT_PORT))
     except ConnectionRefusedError:
         print(COLORS['ERROR'] + 'The server is offline')
         exit(0)
